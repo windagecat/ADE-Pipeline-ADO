@@ -61,6 +61,7 @@ data "external" "logicapp_service_hook" {
     webhook_url       = azurerm_logic_app_trigger_http_request.http_trigger[each.key].callback_url
     pat               = var.ado_pat
     orgnization       = local.ado_orz
+    ado_pj_name       = each.key
   }
 }
 
@@ -69,7 +70,14 @@ resource "null_resource" "delete_logicapp_service_hook" {
   triggers = {
     subscriptionid = data.external.logicapp_service_hook[each.key].result["subscriptionid"]
     orgnization    = local.ado_orz
+    ado_pj_name    = each.key
     pat            = var.ado_pat
+  }
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      rm -f ${path.module}/files/servicehook/${self.triggers.ado_pj_name}_cache.json
+      EOT
   }
   provisioner "local-exec" {
     when    = destroy

@@ -3,18 +3,19 @@
 # Exit if any of the intermediate steps fail
 set -e
 
+# Extract "foo" and "baz" arguments from the input into
+# FOO and BAZ shell variables.
+# jq will ensure that the values are properly quoted
+# and escaped for consumption by the shell.
+eval "$(jq -r '@sh "ado_projectId=\(.ado_projectId) ado_team_group_id=\(.ado_team_group_id) ado_repo_id=\(.ado_repo_id) webhook_url=\(.webhook_url) pat=\(.pat) orgnization=\(.orgnization) ado_pj_name=\(.ado_pj_name)"')"
+
+
 script_path=$(dirname "$0")
-CACHE_FILE="$script_path/cache.json"
+CACHE_FILE="$script_path/${ado_pj_name}_cache.json"
 
 if [ -f "$CACHE_FILE" ]; then
   cat "$CACHE_FILE" | jq
 else
-  # Extract "foo" and "baz" arguments from the input into
-  # FOO and BAZ shell variables.
-  # jq will ensure that the values are properly quoted
-  # and escaped for consumption by the shell.
-  eval "$(jq -r '@sh "ado_projectId=\(.ado_projectId) ado_team_group_id=\(.ado_team_group_id) ado_repo_id=\(.ado_repo_id) webhook_url=\(.webhook_url) pat=\(.pat) orgnization=\(.orgnization)"')"
-
   # JSONデータを作成
   json_data=$(cat <<EOF
   {

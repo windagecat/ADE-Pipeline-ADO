@@ -1,0 +1,119 @@
+# create ade environment and deploy container apps
+trigger:
+ branches:
+    include:
+     - '*'
+ paths:
+    include:
+     - src/*
+
+resources:
+- repo: self
+
+variables:
+- group: ade
+
+stages:
+- stage: create_ade_enviroment_and_deploy_aca
+  displayName: Create  ADE Enviroment and Deploy Container Apps
+  condition: or(ne(variables['Build.Reason'], 'Manual'), ne(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: create_ade_enviroment_and_deploy_aca
+    displayName: Create  ADE Enviroment and Deploy Container Apps
+    pool:
+      name: $(Adpagentpoolname)
+    steps:
+    - task: AzureCLI@2
+      name: adeenv
+      displayName: Create  ADE Enviroment
+      inputs:
+        azureSubscription: $(ServiceConnectionName)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+         if [ $(Build.Reason) == "PullRequest" ]; then
+          envtype="stage"
+          envdifinitionname="ContainerApp-Internal-Frontdoor"
+          sourcebranch=$(System.PullRequest.SourceBranch)
+         elif [ $(Build.SourceBranch) == "refs/heads/main" ]; then
+          envtype="prod"
+          envdifinitionname="ContainerApp-Internal-Frontdoor"
+          sourcebranch=$(Build.SourceBranch)
+         else
+          envtype="dev"
+          envdifinitionname="ContainerApp-Frontdoor"
+          sourcebranch=$(Build.SourceBranch)
+         fi
+
+         srbranchname=${sourcebranch#refs/heads/}
+         branchname=${srbranchname//\//-}
+         repoid=$(Build.Repository.ID)
+         reposhortid=${repoid:0:3}
+
+         echo "Buildsourcebranch is ${sourcebranch}"
+         echo "Repositoryid is ${repoid}"
+         echo "Buildreason is $(Build.Reason)"
+         echo "Buildsourcebranchname is ${srbranchname}"
+         echo "Branchname is ${branchname}"
+         echo "Repositoryshortid is ${reposhortid}" 
+
+
+         
+         echo "Getting environment ${envtype}-${branchname}-${reposhortid}..."
+         environment_rg=`az devcenter dev environment show --name ${envtype}-${branchname}-${reposhortid} \
+              --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) \
+              --only-show-errors --query resourceGroupId --output tsv 2>&1`
+
+         if [ $? -ne 0 ]; then
+          if [[ $environment_rg =~ "EnvironmentCannotBeFound" || $environment_rg =~ "EnvironmentNotFound" ]]; then
+           echo "Environment ${envtype}-${branchname}-${reposhortid} not found, creating..."
+           environment_rg=`az devcenter dev environment create \
+             --name "${envtype}-${branchname}-${reposhortid}" --environment-type ${envtype} \
+             --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) \
+             --catalog-name $(AZURE_CATALOG) --environment-definition-name ${envdifinitionname} \
+             --parameters $(Build.SourcesDirectory)/Environment-Definitions/aca-ade.parameters.json --only-show-errors \
+             --query resourceGroupId --output tsv 2>&1`
+           if [ $? -ne 0 ]; then
+            echo "Failed to create environment ${envtype}-${branchname}-${reposhortid}"
+            echo "::error::az devcenter dev environment create command failed: $environment_rg"; exit 1
+           fi    
+          else
+           echo "Failed to get environment ${envtype}-${branchname}-${reposhortid}"
+           echo "::error::az devcenter dev environment show command failed: $environment_rg"; exit 1
+          fi  
+         else 
+           echo "Skipped to create ${envtype}-${branchname}-${reposhortid}..."        
+         fi
+         
+         echo "Enviroment Resourcegroup Id is ${environment_rg}"
+         rgname=${environment_rg##*/}
+         echo "Enviroment Resourcegroup Name is ${rgname}"
+         acaenvname=`az containerapp env list --resource-group ${rgname} --query [0].name -o tsv`
+         echo "Container App Enviroment Name is ${acaenvname}"
+         acaname=`az containerapp list --resource-group ${rgname} --query [0].name -o tsv`
+         echo "Container App Name is ${acaname}"
+
+         echo "##vso[task.setvariable variable=env_rg_id;]$environment_rg"
+         echo "##vso[task.setvariable variable=env_rg_name;]$rgname"
+         echo "##vso[task.setvariable variable=aca_env_name;]$acaenvname"
+         echo "##vso[task.setvariable variable=aca_name;]$acaname"
+    - task: AzureContainerApps@1
+      displayName: Deploy ContainerApps
+      inputs:
+       appSourcePath: '$(Build.SourcesDirectory)/src'
+       azureSubscription: $(ServiceConnectionName)
+       acrName: $(Acrname)
+       imageToBuild: '$(Acrname).azurecr.io/$(AZURE_PROJECT)/$(env_rg_name):$(Build.BuildId)'
+       containerAppEnvironment: $(aca_env_name)
+       containerAppName: $(aca_name)
+       resourceGroup: $(env_rg_name)
+       #targetPort: 8080
+    - task: Bash@3
+      displayName: Output Enviroment Variables
+      inputs:
+       targetType: inline
+       script: |
+         echo "Enviroment Resourcegroup Id is $(env_rg_id)"
+         echo "Enviroment Resourcegroup Name is $(env_rg_name)"
+        
+      

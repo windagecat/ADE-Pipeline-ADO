@@ -1,0 +1,106 @@
+trigger: none
+resources:
+- repo: self
+variables:
+- group: ade
+stages:
+- stage: delete_ade_enviroments
+  displayName: Delete ADE Enviroments
+  condition: ne(contains(variables['SourceBranch'], 'main'), true)
+  jobs:
+  - job: delete_stage_ade_enviroment
+    displayName: Delete Stage ADE Enviroment
+    pool:
+      name: $(Adpagentpoolname)
+    steps:
+    - task: AzureCLI@2
+      name: deleteadeenv
+      displayName: Delete Stage ADE Enviroment
+      inputs:
+        azureSubscription: $(ServiceConnectionName)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+         envtype="stage"
+         sourcebranch=$(SourceBranch)
+
+         srbranchname=${sourcebranch#refs/heads/}
+         branchname=${srbranchname//\//-}
+         repoid=$(Build.Repository.ID)
+         reposhortid=${repoid:0:3}
+
+         echo "Buildsourcebranch is ${sourcebranch}"
+         echo "Repositoryid is ${repoid}"
+         echo "Buildreason is $(Build.Reason)"
+         echo "Buildsourcebranchname is ${srbranchname}"
+         echo "Branchname is ${branchname}"
+         echo "Repositoryshortid is ${reposhortid}" 
+
+
+         
+         echo "Getting environment ${envtype}-${branchname}-${reposhortid}..."
+         environment_rg=`az devcenter dev environment show --name ${envtype}-${branchname}-${reposhortid} \
+              --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) \
+              --only-show-errors --query resourceGroupId --output tsv 2>&1`
+
+         if [ $? -eq 0 ]; then
+          provisioningstate=`az devcenter dev environment show --name ${envtype}-${branchname}-${reposhortid} --dev-center-name $(AZURE_DEVCENTER) --project-name $(AZURE_PROJECT) --query provisioningState -o tsv`
+          echo "provisioningState is ${provisioningstate}"
+          if [ "$provisioningstate" != "Deleting" ]; then
+           echo "Environment ${envtype}-${branchname}-${reposhortid} is found, deleting..."
+           az devcenter dev environment delete --name ${envtype}-${branchname}-${reposhortid} \
+              --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) --yes      
+          else
+            echo "Enviroment ${envtype}-${branchname}-${reposhortid} is being deleted. Skipped to delete..."
+          fi
+         else 
+           echo "Environment ${envtype}-${branchname}-${reposhortid} not found, skipped to delete..."        
+         fi
+  - job: delete_dev_ade_enviroment
+    displayName: Delete Dev ADE Enviroment
+    pool:
+      name: $(Adpagentpoolname)
+    steps:
+    - task: AzureCLI@2
+      name: deleteadeenv
+      displayName: Delete Dev ADE Enviroment
+      inputs:
+        azureSubscription: $(ServiceConnectionName)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+         envtype="dev"
+         sourcebranch=$(SourceBranch)
+
+         srbranchname=${sourcebranch#refs/heads/}
+         branchname=${srbranchname//\//-}
+         repoid=$(Build.Repository.ID)
+         reposhortid=${repoid:0:3}
+
+         echo "Buildsourcebranch is ${sourcebranch}"
+         echo "Repositoryid is ${repoid}"
+         echo "Buildreason is $(Build.Reason)"
+         echo "Buildsourcebranchname is ${srbranchname}"
+         echo "Branchname is ${branchname}"
+         echo "Repositoryshortid is ${reposhortid}" 
+
+
+         
+         echo "Getting environment ${envtype}-${branchname}-${reposhortid}..."
+         environment_rg=`az devcenter dev environment show --name ${envtype}-${branchname}-${reposhortid} \
+              --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) \
+              --only-show-errors --query resourceGroupId --output tsv 2>&1`
+
+         if [ $? -eq 0 ]; then
+          provisioningstate=`az devcenter dev environment show --name ${envtype}-${branchname}-${reposhortid} --dev-center-name $(AZURE_DEVCENTER) --project-name $(AZURE_PROJECT) --query provisioningState -o tsv`
+          echo "provisioningState is ${provisioningstate}"
+          if [ "$provisioningstate" != "Deleting" ]; then
+           echo "Environment ${envtype}-${branchname}-${reposhortid} is found, deleting..."
+           az devcenter dev environment delete --name ${envtype}-${branchname}-${reposhortid} \
+              --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) --yes      
+          else
+            echo "Enviroment ${envtype}-${branchname}-${reposhortid} is being deleted. Skipped to delete..."
+          fi
+         else 
+           echo "Environment ${envtype}-${branchname}-${reposhortid} not found, skipped to delete..."        
+         fi

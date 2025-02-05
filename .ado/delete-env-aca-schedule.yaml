@@ -1,0 +1,82 @@
+trigger: none
+schedules:
+- cron: '0 15 * * *'
+  displayName: Daily midnight build
+  branches:
+    include:
+      - main
+  always: true
+
+resources:
+- repo: self
+variables:
+- group: ade
+stages:
+- stage: delete_ade_Environments_notused
+  displayName: Delete ADE Environments not used 
+  jobs:
+  - job: delete_ade_Environments_notused
+    displayName: Delete ADE Environments not used 
+    pool:
+      name: $(Adpagentpoolname)
+    steps:
+    - task: AzureCLI@2
+      name: deleteadeenv_notused
+      displayName: Delete ADE Environments not used
+      env:
+        systemtoken: $(System.AccessToken)
+      inputs:
+        azureSubscription: $(ServiceConnectionName)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+         repoid=$(Build.Repository.ID)
+         echo "repoid is $repoid"
+         reposhortid=${repoid:0:3}
+         devcentertoken=$(az account get-access-token --resource https://devcenter.azure.com --query accessToken -otsv)
+         #environment_names=($(curl -s -H "Authorization: Bearer $devcentertoken" "https://$(AZURE_DEVCENTER_ENDPOINT)/projects/$(AZURE_PROJECT)/environments?api-version=2024-02-01" | jq -r '.value[] | select(.provisioningState != "Deleting" and (.name | contains("stage") or contains("dev"))) | .name'))
+         environment_names=($(curl -s -H "Authorization: Bearer $devcentertoken" "https://$(AZURE_DEVCENTER_ENDPOINT)/projects/$(AZURE_PROJECT)/environments?api-version=2024-02-01" | jq -r ".value[] | select(.provisioningState != \"Deleting\" and (.name | test(\"^(dev|stage)-(.+)-${reposhortid}$\"))) | .name"))
+         environment_types=($(curl -s -H "Authorization: Bearer $devcentertoken" "https://$(AZURE_DEVCENTER_ENDPOINT)/projects/$(AZURE_PROJECT)/environmentTypes?api-version=2024-02-01" | jq -r .value[].name))
+         echo "Environment types are"
+         echo ${environment_types[@]} | tr ' ' '\n'
+         #environment_names=($(az devcenter dev environment list --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) --query "[?!contains(provisioningState, 'Deleting') && (contains(name, 'stage') || contains(name, 'dev')) ].name" -o tsv))
+         if [ -n "${environment_names[0]}" ]; then 
+          echo "Environment names are"
+          echo ${environment_names[@]} | tr ' ' '\n'
+          endfrag=0
+          for environment_name in "${environment_names[@]}"; do
+            echo "Environment name is $environment_name"
+            branch_name=$(echo $environment_name | sed -E "s/^(dev|stage)-(.+)-${reposhortid}$/\2/")
+            echo "Branch name is $branch_name"
+            #full_branch_name="refs/heads/$branch_name"
+            #echo "Full branch name is $full_branch_name"
+            #origin_branch_name=$(curl -s -H "Authorization: Bearer $systemtoken" -H "Content-Type: application/json" "https://dev.azure.com/$(ADO_ORGANIZATION)/$(ADO_PROJECT)/_apis/git/repositories/$(ADO_REPOSITORY)/refs?filter=heads/&api-version=6.0" | jq -r ".value[] | select(.name == \"$full_branch_name\") | .name")
+            origin_branch_names=($(curl -s -H "Authorization: Bearer $systemtoken" -H "Content-Type: application/json" "https://dev.azure.com/$(ADO_ORGANIZATION)/$(ADO_PROJECT)/_apis/git/repositories/$(ADO_REPOSITORY)/refs?filter=heads/&api-version=6.0" | jq -r .value[].name))
+            #echo "Origin branch name is $origin_branch_name"
+            deleteflag=0
+            for origin_branch_name in "${origin_branch_names[@]}"; do
+              orisrbranchname=${origin_branch_name#refs/heads/}
+              oribranchname=${orisrbranchname//\//-}
+              echo "Origin branch name is $oribranchname"
+              if [ "$branch_name" == "$oribranchname" ]; then
+                deleteflag=1
+              fi
+            done
+            if [ $deleteflag -eq 0 ]; then
+               echo "There is no branch $branch_name at the originrepo $(ADO_REPOSITORY), so environment $environment_name is deleting..."
+               az devcenter dev environment delete --name $environment_name \
+                --dev-center $(AZURE_DEVCENTER) --project $(AZURE_PROJECT) --yes
+               if [ $? -ne 0 ]; then
+                 endfrag=1
+               fi
+            else
+               echo "Skip to delete environment $environment_name because there is branch $branch_name at the originrepo $(ADO_REPOSITORY)..."
+            fi 
+          done         
+          if [ $endfrag -eq 1 ]; then
+           echo "There are environments that failed to delete."; exit 1
+          fi
+         else 
+          echo "Environment names are ${environment_names[@]}... null"
+          echo "There are no environment names for dev and stage."
+         fi

@@ -1,0 +1,295 @@
+{
+  "type": "object",
+  "properties": {
+    "subscriptionId": {
+      "type": "string"
+    },
+    "notificationId": {
+      "type": "integer"
+    },
+    "id": {
+      "type": "string"
+    },
+    "eventType": {
+      "type": "string"
+    },
+    "publisherId": {
+      "type": "string"
+    },
+    "message": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "html": {
+          "type": "string"
+        },
+        "markdown": {
+          "type": "string"
+        }
+      }
+    },
+    "detailedMessage": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "html": {
+          "type": "string"
+        },
+        "markdown": {
+          "type": "string"
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "project": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "visibility": {
+                  "type": "string"
+                },
+                "lastUpdateTime": {
+                  "type": "string"
+                }
+              }
+            },
+            "defaultBranch": {
+              "type": "string"
+            },
+            "remoteUrl": {
+              "type": "string"
+            }
+          }
+        },
+        "pullRequestId": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "createdBy": {
+          "type": "object",
+          "properties": {
+            "displayName": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "uniqueName": {
+              "type": "string"
+            },
+            "imageUrl": {
+              "type": "string"
+            }
+          }
+        },
+        "creationDate": {
+          "type": "string"
+        },
+        "closedDate": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "sourceRefName": {
+          "type": "string"
+        },
+        "targetRefName": {
+          "type": "string"
+        },
+        "mergeStatus": {
+          "type": "string"
+        },
+        "mergeId": {
+          "type": "string"
+        },
+        "lastMergeSourceCommit": {
+          "type": "object",
+          "properties": {
+            "commitId": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          }
+        },
+        "lastMergeTargetCommit": {
+          "type": "object",
+          "properties": {
+            "commitId": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          }
+        },
+        "lastMergeCommit": {
+          "type": "object",
+          "properties": {
+            "commitId": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            }
+          }
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "reviewerUrl": {
+                "type": "string"
+              },
+              "vote": {
+                "type": "integer"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "uniqueName": {
+                "type": "string"
+              },
+              "imageUrl": {
+                "type": "string"
+              },
+              "isContainer": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "reviewerUrl",
+              "vote",
+              "displayName",
+              "url",
+              "id",
+              "uniqueName",
+              "imageUrl",
+              "isContainer"
+            ]
+          }
+        },
+        "commits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "commitId": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": ["commitId", "url"]
+          }
+        },
+        "url": {
+          "type": "string"
+        },
+        "_links": {
+          "type": "object",
+          "properties": {
+            "web": {
+              "type": "object",
+              "properties": {
+                "href": {
+                  "type": "string"
+                }
+              }
+            },
+            "statuses": {
+              "type": "object",
+              "properties": {
+                "href": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "resourceVersion": {
+      "type": "string"
+    },
+    "resourceContainers": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        },
+        "account": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        },
+        "project": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "createdDate": {
+      "type": "string"
+    }
+  }
+}

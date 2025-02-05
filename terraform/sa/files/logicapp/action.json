@@ -1,0 +1,60 @@
+{
+    "ビルドキュー実行": {
+        "runAfter": {
+            "ado": [
+                "Succeeded"
+            ]
+        },
+        "limit": {
+            "timeout": "PT2M"
+        },
+        "type": "Http",
+        "inputs": {
+            "uri": "https://dev.azure.com/@{variables('ado')['organization']}/@{variables('ado')['project']}/_apis/pipelines/@{variables('ado')['pipelineid']}/runs?api-version=6.0-preview.1",
+            "method": "POST",
+            "headers": {
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "resources": {
+                    "repositories": {
+                        "self": {
+                            "refName": "refs/heads/main"
+                        }
+                    }
+                },
+                "variables": {
+                    "SourceBranch": {
+                        "value": "@{triggerBody()?['resource']?['sourceRefName']}"
+                    }
+                }
+            },
+            "authentication": {
+                "type": "ManagedServiceIdentity",
+                "audience": "499b84ac-1321-427f-aa17-267ca6975798"
+            }
+        },
+        "runtimeConfiguration": {
+            "contentTransfer": {
+                "transferMode": "Chunked"
+            }
+        }
+    },
+    "ado": {
+        "runAfter": {},
+        "type": "InitializeVariable",
+        "inputs": {
+            "variables": [
+                {
+                    "name": "ado",
+                    "type": "object",
+                    "value": {
+                        "organization": "${organization}",
+                        "project": "${ado_pj}",
+                        "pipelineid": "${delete_definition_id}"
+                    }
+                }
+            ]
+        }
+    }
+}

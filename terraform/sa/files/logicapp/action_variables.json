@@ -1,0 +1,17 @@
+{
+  "runAfter": {},
+  "type": "InitializeVariable",
+  "inputs": {
+    "variables": [
+      {
+        "name": "ado",
+        "type": "object",
+        "value": {
+          "organization": "${organization}",
+          "project": "${ado_pj}",
+          "pipelineid": "${delete_definition_id}"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+    "LogRetentionInDays": 30,
+    "cpuCore": "0.5",
+    "memorySize": "1",
+    "containerImage": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest",
+    "targetPort": 8080,
+    "minReplicas": 1,
+    "maxReplicas": 3,
+    "location": "eastasia"
+}
